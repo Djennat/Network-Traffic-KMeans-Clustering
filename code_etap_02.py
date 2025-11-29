@@ -134,7 +134,8 @@ df_clean = pd.read_csv("network_traffic_clean.csv")
 df_scaled = pd.read_csv("network_traffic_scaled.csv")
 
 # 2. Implémenter K-Means avec K=6 (le K Optimal)
-K_OPTIMAL = 6
+K_OPTIMAL = 3
+
 kmeans_final = KMeans(n_clusters=K_OPTIMAL, random_state=42, n_init='auto')
 cluster_labels = kmeans_final.fit_predict(df_scaled)
 
@@ -178,3 +179,95 @@ dominant_protocols = protocol_distribution.loc[
     protocol_distribution.groupby('Cluster')['Percent'].idxmax()
 ]
 print(dominant_protocols.to_markdown(numalign="left", stralign="left", floatfmt=".1f"))
+
+
+
+# =================================================================
+# PHASE 6: ÉVALUATION DES CLUSTERS (Tâche 7)
+# =================================================================
+
+print("\n--- Début de la Tâche 7 : Évaluation des Clusters ---")
+
+from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
+
+X = df_scaled  # données normalisées
+labels = cluster_labels  # labels K-Means K=6
+
+sil_score = silhouette_score(X, labels)
+db_score = davies_bouldin_score(X, labels)
+ch_score = calinski_harabasz_score(X, labels)
+
+print(f"Silhouette Score : {sil_score:.4f}")
+print(f"Davies-Bouldin Index : {db_score:.4f}")
+print(f"Calinski-Harabasz Index : {ch_score:.4f}")
+
+
+# =================================================================
+# PHASE 7: VISUALISATION DES CLUSTERS AVEC PCA (Tâche 6 suite)
+# =================================================================
+
+print("\n--- Visualisation des Clusters avec PCA ---")
+
+from sklearn.decomposition import PCA
+
+# Création du dossier PCA
+import os
+os.makedirs("plots_pca", exist_ok=True)
+
+pca = PCA(n_components=2)
+pca_data = pca.fit_transform(df_scaled)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(pca_data[:, 0], pca_data[:, 1], c=cluster_labels, s=10)
+plt.title("Visualisation des Clusters en 2D avec PCA (K=6)")
+plt.xlabel("PC1")
+plt.ylabel("PC2")
+plt.grid(True)
+plt.savefig("plots_pca/visualisation_pca_clusters.png")
+plt.close()
+
+print("Graphique PCA sauvegardé dans 'plots_pca/'")
+
+
+# =================================================================
+# PHASE 8: ANALYSE EXPLORATOIRE DES DONNÉES (Tâche 3)
+# =================================================================
+
+print("\n--- Début de la Tâche 3 : Analyse Exploratoire des Données ---")
+
+import seaborn as sns
+
+# Création des dossiers
+os.makedirs("plots_hist", exist_ok=True)
+os.makedirs("plots_box", exist_ok=True)
+os.makedirs("plots_heatmap", exist_ok=True)
+
+numeric_cols = [
+    'FlowDuration', 'TotalPackets', 'TotalBytes',
+    'PacketRate', 'ByteRate', 'AvgPacketSize', 'InterArrivalTime'
+]
+
+# 1. Histogrammes
+for col in numeric_cols:
+    plt.figure(figsize=(7, 4))
+    sns.histplot(df_clean[col], kde=True)
+    plt.title(f"Distribution de {col}")
+    plt.savefig(f"plots_hist/hist_{col}.png")
+    plt.close()
+
+# 2. Boxplots
+for col in numeric_cols:
+    plt.figure(figsize=(7, 4))
+    sns.boxplot(x=df_clean[col])
+    plt.title(f"Boxplot de {col}")
+    plt.savefig(f"plots_box/box_{col}.png")
+    plt.close()
+
+# 3. Heatmap de corrélation
+plt.figure(figsize=(10, 8))
+sns.heatmap(df_clean[numeric_cols].corr(), annot=True, cmap="coolwarm")
+plt.title("Matrice de Corrélation (Tâche 3)")
+plt.savefig("plots_heatmap/heatmap_correlation.png")
+plt.close()
+
+print("Histogrammes, boxplots et heatmap enregistrés dans leurs dossiers respectifs.")
