@@ -86,7 +86,7 @@ df_scaled.to_csv("network_traffic_scaled.csv", index=False)
 print("\nFichier 'network_traffic_scaled.csv' créé (Préparation Tâche 4 terminée).")
 
 
-# ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+
 # PHASE 4: DÉTERMINATION DU K OPTIMAL (Tâche 5)
 # ----------------------------------------------------------------
 
@@ -124,7 +124,6 @@ plt.savefig("courbe_du_coude.png")
 
 print("\nExécution de la Tâche 5 terminée. Le graphique 'courbe_du_coude.png' a été sauvegardé.")
 
-# ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]Exécution du Clustering Final
 
 
 print("--- Début de la Tâche 6 : K-Means avec K=6 ---")
@@ -133,7 +132,6 @@ print("--- Début de la Tâche 6 : K-Means avec K=6 ---")
 df_clean = pd.read_csv("network_traffic_clean.csv")
 df_scaled = pd.read_csv("network_traffic_scaled.csv")
 
-# 2. Implémenter K-Means avec K=6 (le K Optimal)
 K_OPTIMAL = 3
 
 kmeans_final = KMeans(n_clusters=K_OPTIMAL, random_state=42, n_init='auto')
@@ -148,7 +146,6 @@ df_clean.to_csv("network_traffic_clustered.csv", index=False)
 print(f"Clustering Terminé. Les étiquettes de cluster (0 à {K_OPTIMAL-1}) ont été ajoutées.")
 print("Fichier 'network_traffic_clustered.csv' créé pour l'interprétation (Tâche 8).")
 
-# ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
 
 
 # ----------------------------------------------------------------
@@ -271,3 +268,53 @@ plt.savefig("plots_heatmap/heatmap_correlation.png")
 plt.close()
 
 print("Histogrammes, boxplots et heatmap enregistrés dans leurs dossiers respectifs.")
+# =================================================================
+# PHASE 9: VISUALISATION DES CLUSTERS AVEC t-SNE 3D (Ajout)
+# =================================================================
+
+print("\n--- Début de la Tâche 6 (suite) : Visualisation 3D avec t-SNE ---")
+
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D 
+import os
+
+# NOTE: Les variables df_scaled, cluster_labels et K_OPTIMAL sont supposées définies
+# K_OPTIMAL doit être = 6 pour cette visualisation
+
+# Création du dossier pour la visualisation t-SNE
+os.makedirs("plots_tsne", exist_ok=True)
+
+# Application de t-SNE pour obtenir 3 dimensions
+tsne = TSNE(n_components=3, random_state=42, n_jobs=-1, perplexity=30, init='pca', learning_rate='auto') 
+tsne_data_3d = tsne.fit_transform(df_scaled)
+
+# Création du graphique 3D
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection='3d') # Configuration 3D
+
+# Les trois axes sont les trois dimensions t-SNE
+scatter = ax.scatter(tsne_data_3d[:, 0], # t-SNE Dimension 1
+                     tsne_data_3d[:, 1], # t-SNE Dimension 2
+                     tsne_data_3d[:, 2], # t-SNE Dimension 3
+                     c=cluster_labels, # Utilise les labels K=6
+                     cmap='viridis', # Colormap pour distinguer les clusters
+                     s=20)
+
+# Ajout d'une légende des couleurs (facultatif mais recommandé pour K=6)
+legend1 = ax.legend(*scatter.legend_elements(), 
+                    title="Clusters",
+                    bbox_to_anchor=(1.05, 1), loc='upper left')
+ax.add_artist(legend1)
+
+ax.set_title(f"Visualisation des Clusters en 3D avec t-SNE (K={K_OPTIMAL})")
+ax.set_xlabel("t-SNE Dimension 1")
+ax.set_ylabel("t-SNE Dimension 2")
+ax.set_zlabel("t-SNE Dimension 3") 
+
+# Sauvegarde du fichier
+output_filename = f"plots_tsne/visualisation_tsne_3d_clusters_k{K_OPTIMAL}.png"
+plt.savefig(output_filename)
+plt.close()
+
+print(f"Visualisation 3D sauvegardée : {output_filename}")
