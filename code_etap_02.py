@@ -4,6 +4,10 @@ from sklearn.preprocessing import StandardScaler
 from scipy.stats import iqr
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+import shutil # Gardé au cas où une autre phase en aurait besoin, mais non utilisé pour la suppression ici
+
 # ----------------------------------------------------------------
 # PHASE 1 & 2: NETTOYAGE DES DONNÉES (Tâche 2)
 # ----------------------------------------------------------------
@@ -160,8 +164,8 @@ df_clustered = pd.read_csv("network_traffic_clustered.csv")
 # 2. Calcul des caractéristiques moyennes par cluster
 # Nous utilisons la moyenne et la médiane pour les colonnes numériques clés
 cluster_summary = df_clustered.groupby('Cluster')[['FlowDuration', 'TotalPackets', 'TotalBytes', 
-                                                     'PacketRate', 'ByteRate', 'Port', 
-                                                     'AvgPacketSize', 'InterArrivalTime']].mean()
+                                                   'PacketRate', 'ByteRate', 'Port', 
+                                                   'AvgPacketSize', 'InterArrivalTime']].mean()
 
 # Afficher les caractéristiques numériques moyennes
 print("\n--- Statistiques Moyennes des Clusters (Profil Numérique) ---")
@@ -216,7 +220,7 @@ pca_data = pca.fit_transform(df_scaled)
 
 plt.figure(figsize=(10, 6))
 plt.scatter(pca_data[:, 0], pca_data[:, 1], c=cluster_labels, s=10)
-plt.title("Visualisation des Clusters en 2D avec PCA (K=6)")
+plt.title("Visualisation des Clusters en 2D avec PCA (K=3)")
 plt.xlabel("PC1")
 plt.ylabel("PC2")
 plt.grid(True)
@@ -234,40 +238,60 @@ print("\n--- Début de la Tâche 3 : Analyse Exploratoire des Données ---")
 
 import seaborn as sns
 
-# Création des dossiers
-os.makedirs("plots_hist", exist_ok=True)
-os.makedirs("plots_box", exist_ok=True)
-os.makedirs("plots_heatmap", exist_ok=True)
+# Création du dossier pour la figure combinée (unique et directe)
+os.makedirs("plots_eda_all_combined", exist_ok=True) 
 
 numeric_cols = [
     'FlowDuration', 'TotalPackets', 'TotalBytes',
     'PacketRate', 'ByteRate', 'AvgPacketSize', 'InterArrivalTime'
 ]
+# Calcul de la matrice de corrélation
+correlation_matrix = df_clean[numeric_cols].corr()
 
-# 1. Histogrammes
-for col in numeric_cols:
-    plt.figure(figsize=(7, 4))
-    sns.histplot(df_clean[col], kde=True)
-    plt.title(f"Distribution de {col}")
-    plt.savefig(f"plots_hist/hist_{col}.png")
-    plt.close()
+# --- CODE DIRECT : Figure unique 8x2 (7 paires Hist/Box + 1 Heatmap) ---
 
-# 2. Boxplots
-for col in numeric_cols:
-    plt.figure(figsize=(7, 4))
-    sns.boxplot(x=df_clean[col])
-    plt.title(f"Boxplot de {col}")
-    plt.savefig(f"plots_box/box_{col}.png")
-    plt.close()
+# Grille de 8 lignes x 2 colonnes = 16 emplacements. 
+fig, axs = plt.subplots(8, 2, figsize=(18, 30)) 
+plt.suptitle("Analyse Exploratoire des Données (Boxplots, Histogrammes et Heatmap)", fontsize=22, y=1.00)
 
-# 3. Heatmap de corrélation
-plt.figure(figsize=(10, 8))
-sns.heatmap(df_clean[numeric_cols].corr(), annot=True, cmap="coolwarm")
-plt.title("Matrice de Corrélation (Tâche 3)")
-plt.savefig("plots_heatmap/heatmap_correlation.png")
+# 1. Tracé des 7 paires (Boxplot + Histogramme)
+for i, col in enumerate(numeric_cols):
+    row = i 
+    
+    # Colonne 0 : Histogramme (Distribution)
+    sns.histplot(df_clean[col], kde=True, ax=axs[row, 0])
+    axs[row, 0].set_title(f"Distribution de {col}")
+    axs[row, 0].set_xlabel(col)
+
+    # Colonne 1 : Boxplot (Outliers/IQR)
+    sns.boxplot(x=df_clean[col], ax=axs[row, 1])
+    axs[row, 1].set_title(f"Boxplot de {col}")
+    axs[row, 1].set_xlabel(col)
+    
+# 2. Tracé de la Heatmap de Corrélation
+# Nous utilisons la 8ème ligne (index 7) pour la Heatmap
+ax_heatmap = plt.subplot(8, 1, 8) 
+
+sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", ax=ax_heatmap, fmt=".2f", linewidths=.5, linecolor='black')
+ax_heatmap.set_title("Matrice de Corrélation entre les Caractéristiques")
+ax_heatmap.tick_params(axis='x', rotation=45)
+ax_heatmap.tick_params(axis='y', rotation=0)
+
+# Suppression des axes originaux de la 8ème ligne qui sont maintenant occupés par ax_heatmap
+fig.delaxes(axs[7, 0])
+fig.delaxes(axs[7, 1])
+
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.98]) # Ajuste l'espacement
+plt.savefig("plots_eda_all_combined/analyse_eda_complete.png")
 plt.close()
 
-print("Histogrammes, boxplots et heatmap enregistrés dans leurs dossiers respectifs.")
+print("Figure unique contenant 7 Boxplots, 7 Histogrammes et la Heatmap créée.")
+print("Fichier sauvegardé dans 'plots_eda_all_combined/analyse_eda_complete.png'.")
+
+# --- Retrait de la logique de nettoyage car les autres dossiers ne sont plus créés ---
+# La phrase suivante est supprimée car elle est incorrecte dans ce nouveau workflow :
+# print("Histogrammes, boxplots et heatmap enregistrés dans leurs dossiers respectifs.")
 # =================================================================
 # PHASE 9: VISUALISATION DES CLUSTERS AVEC t-SNE 3D (Ajout)
 # =================================================================
@@ -275,7 +299,6 @@ print("Histogrammes, boxplots et heatmap enregistrés dans leurs dossiers respec
 print("\n--- Début de la Tâche 6 (suite) : Visualisation 3D avec t-SNE ---")
 
 from sklearn.manifold import TSNE
-import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D 
 import os
 
@@ -303,8 +326,8 @@ scatter = ax.scatter(tsne_data_3d[:, 0], # t-SNE Dimension 1
 
 # Ajout d'une légende des couleurs (facultatif mais recommandé pour K=6)
 legend1 = ax.legend(*scatter.legend_elements(), 
-                    title="Clusters",
-                    bbox_to_anchor=(1.05, 1), loc='upper left')
+                     title="Clusters",
+                     bbox_to_anchor=(1.05, 1), loc='upper left')
 ax.add_artist(legend1)
 
 ax.set_title(f"Visualisation des Clusters en 3D avec t-SNE (K={K_OPTIMAL})")
